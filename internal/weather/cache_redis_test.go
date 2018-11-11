@@ -1,5 +1,13 @@
 // +build sirkon
 
+/*
+Ставим redis как здесь:	https://hub.docker.com/_/redis/
+
+И запускаем его:
+
+	sudo docker run --name some-redis -d redis
+*/
+
 package weather
 
 import (

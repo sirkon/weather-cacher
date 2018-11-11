@@ -1,5 +1,25 @@
 // +build sirkon
 
+/*
+Используем этот docker-образ: https://hub.docker.com/r/kartoza/postgis/
+После установки запускаем образ и создаём БД data:
+
+    sudo docker run --name "postgis" -p 25432:5432 -d -t kartoza/postgis
+
+    psql -h localhost -U docker -p 25432 -d gis
+    CREATE DATABASE data;
+
+    psql -h localhost -U docker -p 25432 -d gis
+    CREATE TABLE public.forecast
+    (
+      id character varying NOT NULL,
+      provider_id character varying NOT NULL,
+      created timestamp without time zone NOT NULL,
+      location geography,
+      CONSTRAINT forecast_pkey PRIMARY KEY (id, provider_id)
+    );
+*/
+
 package weather
 
 import (
@@ -12,7 +32,7 @@ import (
 )
 
 func TestGeoPostgis(t *testing.T) {
-	connStr := "postgres://emacs:djfifmk@localhost/forecast"
+	connStr := "postgres://docker:docker@localhost:25432/data"
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
 		t.Fatal(err)
@@ -52,7 +72,7 @@ func TestGeoPostgis(t *testing.T) {
 	defer cancelFunc()
 
 	_, err = db.ExecContext(ctx,
-		`DELETE FROM data.forecast WHERE id IN ($1, $2, $3, $4)`,
+		`DELETE FROM forecast WHERE id IN ($1, $2, $3, $4)`,
 		data[0].id, data[1].id, data[2].id, data[3].id,
 	)
 	if err != nil {

@@ -27,8 +27,8 @@ SELECT * FROM (
 	SELECT
 		id,
 		ST_Distance(ST_SetSRID(ST_Point($3, $4), 4326)::geography, location) AS dist
-	FROM data.forecast
-  	WHERE provider = $2 AND created > $1
+	FROM forecast
+  	WHERE provider_id = $2 AND created > $1
 ) AS subquery WHERE dist < 5000
 `, fifteenMinutesBefore, provID, lat, lon)
 	if err != nil {
@@ -52,8 +52,8 @@ SELECT * FROM (
 
 func (pg *geoPostgis) Set(ctx context.Context, provID string, lat, lon float64, forecastID string) error {
 	_, err := pg.conn.ExecContext(ctx, `
-INSERT INTO data.forecast (id, created, provider, location) VALUES ($1, $2, $3, ST_SetSRID(ST_Point($4, $5), 4326)::geography)
-`, forecastID, time.Now(), provID, lat, lon)
+INSERT INTO forecast (id, provider_id, created, location) VALUES ($1, $2, $3, ST_SetSRID(ST_Point($4, $5), 4326)::geography)
+`, forecastID, provID, time.Now(), lat, lon)
 	if err != nil {
 		return fmt.Errorf("failed to insert geo data: %s", err)
 	}
