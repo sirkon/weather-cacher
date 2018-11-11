@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/sirkon/weather-cacher/internal/rawclient"
+	"github.com/sirkon/weather-cacher/internal/schema"
 	"github.com/sirkon/weather-cacher/internal/weather"
 )
 
@@ -20,7 +21,7 @@ type client struct {
 }
 
 // WeatherFor ...
-func (c client) WeatherFor(ctx context.Context, lat, lon float64) (*weather.Forecast, error) {
+func (c client) WeatherFor(ctx context.Context, lat, lon float64) (*schema.Forecast, error) {
 	r, err := c.rawClient.Get(ctx, lat, lon)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get data from Dark Sky: %s", err)
@@ -37,110 +38,85 @@ func (c client) WeatherFor(ctx context.Context, lat, lon float64) (*weather.Fore
 	return transformResponse(resp), nil
 }
 
-func transformResponse(r Response) *weather.Forecast {
+func transformResponse(r Response) *schema.Forecast {
 	cur := r.Currently
-	res := &weather.Forecast{
-		Current: weather.Hourly{
+	res := &schema.Forecast{
+		Current: &schema.Hourly{
 			Time:    cur.Time,
 			Summary: cur.Summary,
-			Temperature: struct {
-				Measured float64 `json:"measured,omitempty"`
-				Apparent float64 `json:"apparent,omitempty"`
-				DewPoint float64 `json:"dew_point,omitempty"`
-			}{
+			Temperature: &schema.Hourly_Temperature{
 				Measured: cur.Temperature,
 				Apparent: cur.ApparentTemperature,
 				DewPoint: cur.DewPoint,
 			},
-			Precipitation: struct {
-				Type        string  `json:"type,omitempty"`
-				Intensity   float64 `json:"intensity,omitempty"`
-				Probability float64 `json:"probability,omitempty"`
-			}{
+			Precipation: &schema.Hourly_Precipitation{
 				Type:        cur.PrecipType,
 				Intensity:   cur.PrecipIntensity,
 				Probability: cur.PrecipProbability,
 			},
 			Humidity: cur.Humidity,
 			Pressure: cur.Pressure,
-			Wind: struct {
-				Speed   float64 `json:"speed,omitempty"`
-				Bearing int64   `json:"bearing,omitempty"`
-				Gust    float64 `json:"gust,omitempty"`
-			}{
+			Wind: &schema.Hourly_Wind{
 				Speed:   cur.WindSpeed,
 				Bearing: cur.WindBearing,
 				Gust:    cur.WindGust,
 			},
 			CloudCover: cur.CloudCover,
-			UVIndex:    uint(cur.UvIndex),
+			UvIndex:    int32(cur.UvIndex),
 			Visibility: cur.Visibility,
 		},
 	}
 
-	res.Daily = make([]weather.Daily, len(r.Daily.Data))
+	res.Daily = make([]*schema.Daily, len(r.Daily.Data))
 	for i, day := range r.Daily.Data {
-		f := weather.Daily{
+		f := &schema.Daily{
 			Time:    day.Time,
 			Summary: day.Summary,
-			Sun: struct {
-				Rise int64 `json:"rise,omitempty"`
-				Set  int64 `json:"set,omitempty"`
-			}{
+			Sun: &schema.Daily_Sun{
 				Rise: day.SunriseTime,
 				Set:  day.SunsetTime,
 			},
 			MoonPhase: day.MoonPhase,
-			Temperature: struct {
-				Measured weather.TemperatureMeasurement `json:"measured,omitempty"`
-				Apparent weather.TemperatureMeasurement `json:"apparent,omitempty"`
-				DewPoint float64                        `json:"dew_point,omitempty"`
-			}{
-				Measured: weather.TemperatureMeasurement{
-					Min: weather.Measurement{
+			Temperature: &schema.Daily_Temperature{
+				Measured: &schema.Daily_Temperature_Measurement{
+					Min: &schema.Daily_Temperature_Measurement_Value{
 						Value: day.TemperatureMin,
 						Time:  day.TemperatureMinTime,
 					},
-					Low: weather.Measurement{
+					Low: &schema.Daily_Temperature_Measurement_Value{
 						Value: day.TemperatureLow,
 						Time:  day.TemperatureLowTime,
 					},
-					High: weather.Measurement{
+					High: &schema.Daily_Temperature_Measurement_Value{
 						Value: day.TemperatureHigh,
 						Time:  day.TemperatureHighTime,
 					},
-					Max: weather.Measurement{
+					Max: &schema.Daily_Temperature_Measurement_Value{
 						Value: day.TemperatureMax,
 						Time:  day.TemperatureMaxTime,
 					},
 				},
-				Apparent: weather.TemperatureMeasurement{
-					Min: weather.Measurement{
+				Apparent: &schema.Daily_Temperature_Measurement{
+					Min: &schema.Daily_Temperature_Measurement_Value{
 						Value: day.ApparentTemperatureMin,
 						Time:  day.ApparentTemperatureMinTime,
 					},
-					Low: weather.Measurement{
+					Low: &schema.Daily_Temperature_Measurement_Value{
 						Value: day.ApparentTemperatureLow,
 						Time:  day.ApparentTemperatureLowTime,
 					},
-					High: weather.Measurement{
+					High: &schema.Daily_Temperature_Measurement_Value{
 						Value: day.ApparentTemperatureHigh,
 						Time:  day.ApparentTemperatureHighTime,
 					},
-					Max: weather.Measurement{
+					Max: &schema.Daily_Temperature_Measurement_Value{
 						Value: day.ApparentTemperatureMax,
 						Time:  day.ApparentTemperatureMaxTime,
 					},
 				},
 				DewPoint: day.DewPoint,
 			},
-			Precipitation: struct {
-				Type             string  `json:"type,omitempty"`
-				Intensity        float64 `json:"intensity,omitempty"`
-				MaxIntensity     float64 `json:"max_intensity,omitempty"`
-				MaxIntensityTime int64   `json:"max_intensity_time,omitempty"`
-				Probability      float64 `json:"probability,omitempty"`
-			}{
+			Precipation: &schema.Daily_Precipitation{
 				Type:             day.PrecipType,
 				Intensity:        day.PrecipIntensity,
 				MaxIntensity:     day.PrecipIntensityMax,
@@ -149,23 +125,15 @@ func transformResponse(r Response) *weather.Forecast {
 			},
 			Humidity: day.Humidity,
 			Pressure: day.Pressure,
-			Wind: struct {
-				Speed    float64 `json:"speed,omitempty"`
-				Bearing  int64   `json:"bearing,omitempty"`
-				Gust     float64 `json:"gust,omitempty"`
-				GustTime int64   `json:"gust_time,omitempty"`
-			}{
+			Wind: &schema.Daily_Wind{
 				Speed:    day.WindSpeed,
 				Bearing:  day.WindBearing,
 				Gust:     day.WindGust,
 				GustTime: day.WindGustTime,
 			},
 			CloudCover: day.CloudCover,
-			UV: struct {
-				Index uint  `json:"index,omitempty"`
-				Time  int64 `json:"time,omitempty"`
-			}{
-				Index: uint(day.UvIndex),
+			Uv: &schema.Daily_UVValue{
+				Index: int32(day.UvIndex),
 				Time:  day.UvIndexTime,
 			},
 			Visibility: day.Visibility,
@@ -173,42 +141,30 @@ func transformResponse(r Response) *weather.Forecast {
 		res.Daily[i] = f
 	}
 
-	res.Hourly = make([]weather.Hourly, len(r.Hourly.Data))
+	res.Hourly = make([]*schema.Hourly, len(r.Hourly.Data))
 	for i, hour := range r.Hourly.Data {
-		h := weather.Hourly{
+		h := &schema.Hourly{
 			Time:    hour.Time,
 			Summary: hour.Summary,
-			Temperature: struct {
-				Measured float64 `json:"measured,omitempty"`
-				Apparent float64 `json:"apparent,omitempty"`
-				DewPoint float64 `json:"dew_point,omitempty"`
-			}{
+			Temperature: &schema.Hourly_Temperature{
 				Measured: hour.Temperature,
 				Apparent: hour.ApparentTemperature,
 				DewPoint: hour.DewPoint,
 			},
-			Precipitation: struct {
-				Type        string  `json:"type,omitempty"`
-				Intensity   float64 `json:"intensity,omitempty"`
-				Probability float64 `json:"probability,omitempty"`
-			}{
+			Precipation: &schema.Hourly_Precipitation{
 				Type:        hour.PrecipType,
 				Intensity:   hour.PrecipIntensity,
 				Probability: hour.PrecipProbability,
 			},
 			Humidity: hour.Humidity,
 			Pressure: hour.Pressure,
-			Wind: struct {
-				Speed   float64 `json:"speed,omitempty"`
-				Bearing int64   `json:"bearing,omitempty"`
-				Gust    float64 `json:"gust,omitempty"`
-			}{
+			Wind: &schema.Hourly_Wind{
 				Speed:   hour.WindSpeed,
 				Bearing: hour.WindBearing,
 				Gust:    hour.WindGust,
 			},
 			CloudCover: hour.CloudCover,
-			UVIndex:    uint(hour.UvIndex),
+			UvIndex:    int32(hour.UvIndex),
 			Visibility: hour.Visibility,
 		}
 		res.Hourly[i] = h

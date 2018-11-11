@@ -1,0 +1,118 @@
+syntax = "proto3";
+
+package schema;
+
+
+// Hourly данные по погоде за час
+message Hourly {
+    int64 time = 1;     // время в Unix Time для которого сделан прогноз / отданные текущие погодные условия
+    string summary = 2; // краткое описание
+
+    // Temperature показатели по погоде на краткий период времени
+    message Temperature {
+        double measured = 1;  // температура в C°
+        double apparent = 2;  // температура в C°
+        double dew_point = 3; // точка росы
+    }
+    Temperature temperature = 3;
+
+    // Precipitation данные по осадкам
+    message Precipitation {
+        string type = 1;        // тип осадков
+        double intensity = 2;   // количество осадков в мм
+        double probability = 3; // вероятность осадков
+    }
+    Precipitation precipation = 4;
+
+    double humidity = 5; // влажность
+    double pressure = 6; // атмосферное давление
+
+    // Wind данные по ветру
+    message Wind {
+        double speed = 1;  // скорость ветра в м/с
+        int64 bearing = 2; // направление ветра
+        double gust = 3;   // порывы ветра
+    }
+    Wind wind = 7;
+
+    double cloud_cover = 8; // количество облачности
+    int32 uv_index = 9;     // индекс ультрафиолетового облучения
+    double visibility = 10; // видимость
+};
+
+
+// Daily данные по погоде на день
+message Daily {
+    int64 time = 1;     // время в Unix Time для которого сделан прогноз / отданные текущие погодные условия
+    string summary = 2; // краткое описание
+
+    // Sun данные по восходу-закату
+    message Sun {
+        int64 rise = 1; // время восхода солнца
+        int64 set = 2;  // время заката
+    }
+    Sun sun = 3;
+
+    double moon_phase = 4; // фаза луны
+
+    // Temperature данные по температуре за день
+    message Temperature {
+        // Measurement статистики по температурной метрике
+        message Measurement {
+            // Value значение и время измерения
+            message Value {
+                double value = 1; // значение метрики
+                int64 time = 2;   // время, когда было снято значение
+            }
+
+            Value min = 1;  // минимальное значение температуры
+            Value low = 2;  // т.н. "low" температура
+            Value high = 3; // т.н. "high" температура
+            Value max = 4;  // максимальное значение температуры
+        }
+
+        Measurement measured = 1; // инструментальное значение температуры
+        Measurement apparent = 2; // воспринимаемая температура
+        double dew_point = 3;     // точка росы
+    }
+    Temperature temperature = 5;
+
+    // Precipitation данные по осадкам
+    message Precipitation {
+        string type = 1;              // тип осадков
+        double intensity = 2;         // количество осадков в мм
+        double max_intensity = 3;     // максимальное количество осадков в час за день
+        int64 max_intensity_time = 4; // время максимального количества осадков
+        double probability = 5;       // вероятность осадков
+    }
+    Precipitation precipation = 6;
+
+    double humidity = 7; // влажность
+    double pressure = 8; // атмосферное давление
+
+    // Wind данные по ветру
+    message Wind {
+        double speed = 1;    // скорость ветра в м/с
+        int64 bearing = 2;   // направление ветра
+        double gust = 3;     // порывы ветра
+        int64 gust_time = 4; // ожидаемое время максимальных порывов
+    }
+    Wind wind = 9;
+
+    double cloud_cover = 10; // количество облачности
+
+    message UVValue {
+        int32 index = 1; // индекс мощности УФ-излучения
+        int64 time = 2;  // время достижения максимального индекса излучения
+    }
+    UVValue uv = 11;
+
+    double visibility = 12; // видимость
+}
+
+// Forecast прогноз погоды на определённое число дней + почасовой прогноз погоды на сколько-то часов вперёд
+message Forecast {
+    Hourly current = 1;         // текущие погодные условия
+    repeated Hourly hourly = 2; // почасовые прогнозы погоды
+    repeated Daily daily = 3;   // дневные прогнозы погоды
+}

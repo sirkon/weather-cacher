@@ -8,17 +8,18 @@
 	sudo docker run --name some-redis -d redis
 */
 
-package weather
+package cache
 
 import (
 	"context"
 	"github.com/go-redis/redis"
+	"github.com/sirkon/weather-cacher/internal/schema"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
 )
 
-func TestCacheRedis(t *testing.T) {
+func TestRedis(t *testing.T) {
 	c := redis.NewClient(&redis.Options{
 		Addr: "localhost:6379",
 	})
@@ -28,32 +29,11 @@ func TestCacheRedis(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cr := CacheRedis(c)
+	cr := Redis(c)
 
-	f := &Forecast{
-		Current: Hourly{
-			Time:    0,
+	f := &schema.Forecast{
+		Current: &schema.Hourly{
 			Summary: "forecast",
-			Temperature: struct {
-				Measured float64 `json:"measured,omitempty"`
-				Apparent float64 `json:"apparent,omitempty"`
-				DewPoint float64 `json:"dew_point,omitempty"`
-			}{},
-			Precipitation: struct {
-				Type        string  `json:"type,omitempty"`
-				Intensity   float64 `json:"intensity,omitempty"`
-				Probability float64 `json:"probability,omitempty"`
-			}{},
-			Humidity: 0,
-			Pressure: 0,
-			Wind: struct {
-				Speed   float64 `json:"speed,omitempty"`
-				Bearing int64   `json:"bearing,omitempty"`
-				Gust    float64 `json:"gust,omitempty"`
-			}{},
-			CloudCover: 0,
-			UVIndex:    0,
-			Visibility: 0,
 		},
 		Hourly: nil,
 		Daily:  nil,

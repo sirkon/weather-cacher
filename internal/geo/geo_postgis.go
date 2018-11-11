@@ -1,4 +1,4 @@
-package weather
+package geo
 
 import (
 	"context"
@@ -9,18 +9,18 @@ import (
 	_ "github.com/lib/pq"
 )
 
-// GeoPostgis конструктор Geo работающего поверх postgis
-func GeoPostgis(conn *sql.DB) Geo {
-	return &geoPostgis{
+// Postgis конструктор Geo работающего поверх postgis
+func Postgis(conn *sql.DB) Geo {
+	return &postgis{
 		conn: conn,
 	}
 }
 
-type geoPostgis struct {
+type postgis struct {
 	conn *sql.DB
 }
 
-func (pg *geoPostgis) GetNearby(ctx context.Context, provID string, lat, lon float64) (map[string]float64, error) {
+func (pg *postgis) GetNearby(ctx context.Context, provID string, lat, lon float64) (map[string]float64, error) {
 	fifteenMinutesBefore := time.Now().Add(-time.Minute * 15)
 	rows, err := pg.conn.QueryContext(ctx, `
 SELECT * FROM (
@@ -50,7 +50,7 @@ SELECT * FROM (
 	return res, nil
 }
 
-func (pg *geoPostgis) Set(ctx context.Context, provID string, lat, lon float64, forecastID string) error {
+func (pg *postgis) Set(ctx context.Context, provID string, lat, lon float64, forecastID string) error {
 	_, err := pg.conn.ExecContext(ctx, `
 INSERT INTO forecast (id, provider_id, created, location) VALUES ($1, $2, $3, ST_SetSRID(ST_Point($4, $5), 4326)::geography)
 `, forecastID, provID, time.Now(), lat, lon)

@@ -20,7 +20,7 @@
     );
 */
 
-package weather
+package geo
 
 import (
 	"context"
@@ -78,7 +78,7 @@ func TestGeoPostgis(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	g := GeoPostgis(db)
+	g := Postgis(db)
 
 	const providerID = "prov-id"
 

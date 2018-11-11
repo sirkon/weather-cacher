@@ -1,4 +1,4 @@
-package weather
+package cache
 
 import (
 	"bytes"
@@ -6,34 +6,35 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/go-redis/redis"
+	"github.com/sirkon/weather-cacher/internal/schema"
 	"time"
 )
 
-// CacheRedis конструктор кеша работающего поверх redis-а
-func CacheRedis(c *redis.Client) Cache {
-	return &cacheRedis{
+// Redis конструктор кеша работающего поверх redis-а
+func Redis(c *redis.Client) Cache {
+	return &redisImpl{
 		client: c,
 		prefix: "redis-cache::",
 	}
 }
 
-type cacheRedis struct {
+type redisImpl struct {
 	client *redis.Client
 	prefix string
 }
 
-func (cr *cacheRedis) keyName(key string) string {
+func (cr *redisImpl) keyName(key string) string {
 	return cr.prefix + key
 }
 
 // Get ...
-func (cr *cacheRedis) Get(ctx context.Context, forecastID string) (*Forecast, error) {
+func (cr *redisImpl) Get(ctx context.Context, forecastID string) (*schema.Forecast, error) {
 	res := cr.client.WithContext(ctx).Get(cr.keyName(forecastID))
 	if err := res.Err(); err != nil {
 		return nil, fmt.Errorf("failed to query for a given key: %s", err)
 	}
 
-	result := &Forecast{}
+	result := &schema.Forecast{}
 	data, err := res.Bytes()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get a value bound to given key: %s", err)
@@ -47,7 +48,7 @@ func (cr *cacheRedis) Get(ctx context.Context, forecastID string) (*Forecast, er
 }
 
 // Set ...
-func (cr *cacheRedis) Set(ctx context.Context, forecastID string, forecast *Forecast) error {
+func (cr *redisImpl) Set(ctx context.Context, forecastID string, forecast *schema.Forecast) error {
 	buf := &bytes.Buffer{}
 	enc := json.NewEncoder(buf)
 	if err := enc.Encode(forecast); err != nil {
