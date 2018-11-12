@@ -1,2 +1,2 @@
 # weather-cacher
-Service for caching weather data from different sources
+gRPC service for caching weather data from different sources
