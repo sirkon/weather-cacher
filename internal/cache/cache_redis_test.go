@@ -13,8 +13,8 @@ package cache
 import (
 	"context"
 	"github.com/go-redis/redis"
+	"github.com/golang/protobuf/proto"
 	"github.com/sirkon/weather-cacher/internal/schema"
-	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
 )
@@ -52,5 +52,7 @@ func TestRedis(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	require.Equal(t, f, res)
+	if !proto.Equal(f, res) {
+		t.Fatalf("got different object from cache")
+	}
 }

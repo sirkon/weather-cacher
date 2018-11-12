@@ -1,11 +1,10 @@
 package cache
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"github.com/go-redis/redis"
+	"github.com/golang/protobuf/proto"
 	"github.com/sirkon/weather-cacher/internal/schema"
 	"time"
 )
@@ -40,7 +39,7 @@ func (cr *redisImpl) Get(ctx context.Context, forecastID string) (*schema.Foreca
 		return nil, fmt.Errorf("failed to get a value bound to given key: %s", err)
 	}
 
-	if err := json.Unmarshal(data, &result); err != nil {
+	if err := proto.Unmarshal(data, result); err != nil {
 		return nil, fmt.Errorf("got corrupted data from source: %s", err)
 	}
 
@@ -49,13 +48,12 @@ func (cr *redisImpl) Get(ctx context.Context, forecastID string) (*schema.Foreca
 
 // Set ...
 func (cr *redisImpl) Set(ctx context.Context, forecastID string, forecast *schema.Forecast) error {
-	buf := &bytes.Buffer{}
-	enc := json.NewEncoder(buf)
-	if err := enc.Encode(forecast); err != nil {
+	data, err := proto.Marshal(forecast)
+	if err != nil {
 		return fmt.Errorf("failed to serialize forecast structure: %s", err)
 	}
 
-	if err := cr.client.WithContext(ctx).Set(cr.keyName(forecastID), buf.String(), time.Minute*15).Err(); err != nil {
+	if err := cr.client.WithContext(ctx).Set(cr.keyName(forecastID), data, time.Minute*15).Err(); err != nil {
 		return fmt.Errorf("failed to store forecast value: %s", err)
 	}
 
