@@ -10,4 +10,5 @@ require (
 	github.com/sanity-io/litter v1.1.0
 	github.com/stretchr/objx v0.1.1 // indirect
 	github.com/stretchr/testify v1.2.2
+	google.golang.org/grpc v1.16.0 // indirect
 )

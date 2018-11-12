@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package schema;
+
+import "schema/forecast.proto";
+
+// WeatherRequest формат запроса для получения погоды
+message WeatherRequest {
+    string user_id = 1; // идентификатор пользователя
+
+    string provider_id = 2; // идентификатор провайдера
+    double latitude = 3;    // географическая широта точки
+    double longitude = 4;   // географическая долгота точки
+};
+
+// WeatherResponse форма
+message WeatherResponse {
+    // Error описание ошибки
+    message Error {
+        string msg = 1; // текст ошибки
+    }
+
+    oneof Result {
+        Error error = 1;              // возврат ошибки
+        schema.Forecast forecast = 2; // результат при успехе
+    };
+}
+
+// Weather сервис предоставления погоды
+service Weather {
+    // Get получение погоды от данного провайдера для данного местоположения
+    rpc Get(WeatherRequest) returns (WeatherResponse);
+};

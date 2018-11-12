@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
-	"github.com/golang/protobuf/jsonpb"
+	"github.com/golang/protobuf/proto"
 	"github.com/sirkon/weather-cacher/internal/schema"
 	"hash"
 	"io"
@@ -35,8 +35,11 @@ func (ig *IDGen) ID(provID string, lat, lon float64, forecast *schema.Forecast) 
 	binary.BigEndian.PutUint64(floatBuf[:], math.Float64bits(lon))
 	ig.hash.Write(floatBuf[:])
 
-	marshaler := jsonpb.Marshaler{}
-	if err := marshaler.Marshal(ig.hash, forecast); err != nil {
+	data, err := proto.Marshal(forecast)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal input forecast: %s", err)
+	}
+	if _, err := ig.hash.Write(data); err != nil {
 		return "", fmt.Errorf("failed to convert forecast when building forecast ID: %s", err)
 	}
 
