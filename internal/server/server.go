@@ -11,26 +11,40 @@ import (
 	"google.golang.org/grpc/metadata"
 	"log"
 	"math"
-	"time"
+	"sync"
 )
 
 const userAuthToken = "x-user-token"
 
+type backgroundTask struct {
+	provID  string
+	lat     float64
+	lon     float64
+	forecat *schema.Forecast
+}
+
 // Weather конструктор реализации schema.WeatherServer
-func Weather(providers map[string]weather.Source, cache cache.Cache, geo geo.Geo, idGen idgen.IDGen) schema.WeatherServer {
-	return &server{
+func Weather(providers map[string]weather.Source, cache cache.Cache, geo geo.Geo, idGen *idgen.IDGen) (schema.WeatherServer, Background) {
+	s := &server{
 		providers: providers,
 		cache:     cache,
 		geo:       geo,
 		idGen:     idGen,
+		stop:      make(chan struct{}),
+		tasks:     make(chan backgroundTask, 256), // не должно быть слишком большого количества записей, пусть будет 256
+		wg:        &sync.WaitGroup{},
 	}
+	return s, s
 }
 
 type server struct {
 	providers map[string]weather.Source
 	cache     cache.Cache
 	geo       geo.Geo
-	idGen     idgen.IDGen
+	idGen     *idgen.IDGen
+	stop      chan struct{}
+	tasks     chan backgroundTask
+	wg        *sync.WaitGroup
 }
 
 func errorResult(msg string) *schema.WeatherResponse {
@@ -86,31 +100,23 @@ func (s *server) Get(ctx context.Context, req *schema.WeatherRequest) (*schema.W
 	}
 
 	// сохраняем полученный прогноз, по-возможности, в кеше, делаем это в фоне
-	go s.storeForecast(req, forecast)
-
+	select {
+	case <-s.stop:
+		// ничего не делаем, задания на вычитку задач остановлены
+	case s.tasks <- backgroundTask{
+		provID:  req.ProviderId,
+		lat:     req.Latitude,
+		lon:     req.Longitude,
+		forecat: nil,
+	}:
+	default:
+		// не получилось закинуть задачу на сохранение полученных данных в кеше, ну да и ладно
+	}
 	return &schema.WeatherResponse{
 		Result: &schema.WeatherResponse_Forecast{
 			Forecast: forecast,
 		},
 	}, nil
-}
-
-func (s *server) storeForecast(req *schema.WeatherRequest, forecast *schema.Forecast) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
-	defer cancel()
-
-	forecastID, err := s.idGen.ID(req.ProviderId, req.Latitude, req.Longitude, forecast)
-	if err != nil {
-		log.Println("failed to compute forecast id", err)
-		return
-	}
-	if err := s.cache.Set(ctx, forecastID, forecast); err != nil {
-		log.Println("failed to write forecast into the cache", err)
-		return
-	}
-	if err := s.geo.Set(ctx, req.ProviderId, req.Latitude, req.Longitude, forecastID); err != nil {
-		log.Println("failed to register forecast into the DB", err)
-	}
 }
 
 func (s *server) validateRequest(md metadata.MD, req *schema.WeatherRequest) bool {
